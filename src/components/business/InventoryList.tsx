@@ -8,11 +8,13 @@ import { getStrategyLabel, getUrgencyColor } from "@/lib/aiRecommendation";
 import { InventoryItem } from "@/types/inventory";
 import { Package, TrendingDown, Heart, Gavel, Trash2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const InventoryList = () => {
   const { user } = useAuth();
   const { inventory, updateItemStatus, deleteInventoryItem, getItemBids, getItemDonations } = useInventory();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const businessInventory = inventory.filter(item => item.businessId === user?.id);
 
@@ -33,15 +35,21 @@ const InventoryList = () => {
   const handleApplyStrategy = (item: InventoryItem) => {
     if (!item.aiRecommendation) return;
 
+    // If price reduction, navigate to Dynamic Pricing page
+    if (item.aiRecommendation.strategy === "price_reduction") {
+      navigate("/dynamic-pricing", { state: { itemId: item.id } });
+      return;
+    }
+
+    // Otherwise, just update status
     const statusMap: Record<string, InventoryItem['status']> = {
-      'price_reduction': 'reduced',
       'donation': 'donated',
       'bidding': 'bidding'
     };
 
     const newStatus = statusMap[item.aiRecommendation.strategy];
     updateItemStatus(item.id, newStatus);
-    
+
     toast({
       title: "Strategy applied!",
       description: `${item.name} is now available for ${getStrategyLabel(item.aiRecommendation.strategy).toLowerCase()}.`
@@ -125,7 +133,7 @@ const InventoryList = () => {
                 const daysLeft = getDaysUntilExpiry(item.expiryDate);
                 const bids = getItemBids(item.id);
                 const donations = getItemDonations(item.id);
-                
+
                 return (
                   <TableRow key={item.id}>
                     <TableCell>
@@ -134,9 +142,7 @@ const InventoryList = () => {
                         <p className="text-sm text-muted-foreground">{item.category}</p>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {item.quantity} {item.unit}
-                    </TableCell>
+                    <TableCell>{item.quantity} {item.unit}</TableCell>
                     <TableCell>
                       <div>
                         <p>${item.originalPrice.toFixed(2)}</p>
@@ -158,12 +164,8 @@ const InventoryList = () => {
                     <TableCell>
                       <div className="space-y-1">
                         {getStatusBadge(item.status)}
-                        {bids.length > 0 && (
-                          <p className="text-xs text-muted-foreground">{bids.length} bids</p>
-                        )}
-                        {donations.length > 0 && (
-                          <p className="text-xs text-muted-foreground">{donations.length} claims</p>
-                        )}
+                        {bids.length > 0 && <p className="text-xs text-muted-foreground">{bids.length} bids</p>}
+                        {donations.length > 0 && <p className="text-xs text-muted-foreground">{donations.length} claims</p>}
                       </div>
                     </TableCell>
                     <TableCell>

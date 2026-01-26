@@ -14,7 +14,7 @@ import { Leaf, LogOut, Gavel, Heart, Clock, MapPin, Building2 } from "lucide-rea
 
 const UserDashboard = () => {
   const { user, isAuthenticated, logout } = useAuth();
-  const { getAvailableForBidding, getAvailableForDonation, placeBid, claimDonation, loadData } = useInventory();
+  const { getAvailableForBidding, getAvailableForDonation, getUserTransactions, placeBid, claimDonation, loadData } = useInventory();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -32,6 +32,11 @@ const UserDashboard = () => {
 
   const biddingItems = getAvailableForBidding();
   const donationItems = getAvailableForDonation();
+
+  const userTransactions = user
+    ? getUserTransactions(user.id)
+    : [];
+
 
   const handlePlaceBid = (itemId: string) => {
     if (!user || !bidAmount) return;
@@ -126,6 +131,10 @@ const UserDashboard = () => {
             <TabsTrigger value="donations" className="gap-2">
               <Heart className="h-4 w-4" />
               Donations ({donationItems.length})
+            </TabsTrigger>
+            <TabsTrigger value="status" className="gap-2">
+              <Clock className="h-4 w-4" />
+              My Purchases 
             </TabsTrigger>
           </TabsList>
 
@@ -305,6 +314,59 @@ const UserDashboard = () => {
               </div>
             )}
           </TabsContent>
+
+          <TabsContent value="status">
+            {userTransactions.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Clock className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">
+                    No activity yet
+                  </h3>
+                  <p className="text-muted-foreground text-center">
+                    Your bids and donation claims will appear here.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {userTransactions.map((tx) => (
+                  <Card key={tx.id}>
+                    <CardContent className="flex justify-between items-center py-4">
+                      <div className="space-y-1">
+                        <h4 className="font-medium text-foreground">
+                          {tx.itemName}
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          {tx.type === "bid"
+                            ? `Bid: $${tx.amount}`
+                            : `Donation request: ${tx.quantity}`}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(tx.createdAt)}
+                        </p>
+                      </div>
+
+                      <Badge
+                        variant="secondary"
+                        className={
+                          tx.status === "approved" || tx.status === "won"
+                            ? "bg-green-100 text-green-700"
+                            : tx.status === "rejected"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-yellow-100 text-yellow-700"
+                        }
+                      >
+                        {tx.status.toUpperCase()}
+                      </Badge>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+
         </Tabs>
       </main>
     </div>
