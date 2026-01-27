@@ -93,14 +93,7 @@ const BusinessAnalytics = () => {
 
         <Tabs defaultValue="analytics" className="space-y-6">
           <TabsList>
-            <TabsTrigger
-              value="business-info"
-              className="gap-2"
-              onClick={() => navigate("/business/info")}
-            >
-              <Leaf className="h-4 w-4" />
-              Business Analytics
-            </TabsTrigger>
+
             <TabsTrigger
               value="inventory"
               className="gap-2"
@@ -109,11 +102,7 @@ const BusinessAnalytics = () => {
               <Package className="h-4 w-4" />
               Inventory
             </TabsTrigger>
-            <TabsTrigger
-              value="requests"
-              className="gap-2"
-              onClick={() => navigate("/business/requests")}
-            >
+            <TabsTrigger value="requests" className="gap-2">
               <ClipboardList className="h-4 w-4" />
               Requests
             </TabsTrigger>

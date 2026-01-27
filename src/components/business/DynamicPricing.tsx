@@ -135,9 +135,10 @@ const DynamicPricing = () => {
                 </p>
               </CardHeader>
 
+              {/*add company name and location*/}
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="company-description">Company Description</Label>
+                  <Label htmlFor="company-description">Business</Label>
                   <Input
                     id="company-description"
                     value={companyDescription}
