@@ -60,6 +60,15 @@ const BusinessDashboard = () => {
 
         <Tabs defaultValue="inventory" className="space-y-6">
           <TabsList>
+
+            <TabsTrigger
+              value="business-info"
+              className="gap-2"
+              onClick={() => navigate("/business/info")}
+            >
+              <Leaf className="h-4 w-4" />
+              Business Info
+            </TabsTrigger>
             <TabsTrigger value="inventory" className="gap-2">
               <Package className="h-4 w-4" />
               Inventory

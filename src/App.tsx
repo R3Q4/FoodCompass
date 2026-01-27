@@ -8,7 +8,7 @@ import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import BusinessDashboard from "./pages/BusinessDashboard";
 import BusinessAnalytics from "./pages/BusinessAnalytics";
-import DynamicPricing from "@/pages/DynamicPricing";
+import DynamicPricing from "@/components/business/DynamicPricing";
 import UserDashboard from "./pages/UserDashboard";
 import NotFound from "./pages/NotFound";
 
@@ -27,7 +27,7 @@ const App = () => (
             <Route path="/business" element={<BusinessDashboard />} />
             <Route path="/business/analytics" element={<BusinessAnalytics />} />
             <Route path="/user" element={<UserDashboard />} />
-            <Route path="/dynamic-pricing" element={<DynamicPricing />} />
+            <Route path="business/info" element={<DynamicPricing />} />
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
