@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2 } from "lucide-react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 interface InventoryItem {
@@ -27,92 +26,64 @@ interface Message {
   timestamp: Date;
 }
 
+interface AIProps {
+  inventoryItem: InventoryItem;
+  onClose: () => void;
+}
+
 // Gemini setup
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY!);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-export default function AI() {
-  const { itemId } = useParams();
-  const [item, setItem] = useState<InventoryItem | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+export default function AI({ inventoryItem, onClose }: AIProps) {
+  const [messages, setMessages] = useState<Message[]>([]); // only assistant messages will be rendered initially
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const hasInitialized = useRef(false);
-
   const chatRef = useRef(
     model.startChat({
       history: [],
-      generationConfig: { maxOutputTokens: 500 },
+      generationConfig: { maxOutputTokens: 2000 },
     })
   );
 
-  // Load item
+  // Initial AI response (hidden user prompt)
   useEffect(() => {
-    const inventory: InventoryItem[] = JSON.parse(
-      sessionStorage.getItem("inventoryList") || "[]"
-    );
-    const found = inventory.find(i => i.id === itemId);
-    setItem(found || null);
-  }, [itemId]);
-
-  // Initial AI prompt (only runs once)
-  useEffect(() => {
-    if (!item || hasInitialized.current) return;
-    hasInitialized.current = true;
-
-    // Compose default system message
-    const defaultPrompt = `
-You are a helpful assistant advising a business on reducing food waste and maximizing recovery.
+    const initialPrompt = `
+You are an assistant advising a business on reducing food waste and maximizing revenue.
 Using the following item details, provide a short explanation why lowering the price is a smart decision:
-
+Answer in this format: recommended percentage discount, reason on a new line
 Item details:
-- Name: ${item.name}
-- Quantity: ${item.quantity} ${item.unit}
-- Original Price: $${item.originalPrice}
-- Category: ${item.category}
-- Expiry Date: ${item.expiryDate}
-- Location: ${item.location}
-- Business: ${item.businessName}
-- Description: ${item.description || "N/A"}
+- Name: ${inventoryItem.name}
+- Quantity: ${inventoryItem.quantity} ${inventoryItem.unit}
+- Original Price: $${inventoryItem.originalPrice}
+- Category: ${inventoryItem.category}
+- Expiry Date: ${inventoryItem.expiryDate}
+- Location: ${inventoryItem.location}
+- Business: ${inventoryItem.businessName}
+- Description: ${inventoryItem.description || "N/A"}
 `;
 
-    sendMessage(defaultPrompt, "user");
-  }, [item]);
+    fetchAIResponse(initialPrompt);
+  }, [inventoryItem]);
 
-  // Send message function
-  const sendMessage = async (text: string, role: "user" | "assistant" = "user") => {
-    if (!text.trim() || isLoading) return;
-
-    // Add user's message first (or system-preloaded)
-    setMessages(prev => [
-      ...prev,
-      { id: Date.now(), role, content: text, timestamp: new Date() },
-    ]);
-
-    if (role === "assistant") return; // skip API call for assistant-preloaded messages
-
+  const fetchAIResponse = async (prompt: string) => {
     setIsLoading(true);
-    setInputValue("");
 
     try {
-      const result = await chatRef.current.sendMessage(text);
+      const result = await chatRef.current.sendMessage(prompt);
       const responseText = result.response.text();
 
+      // Only append assistant messages for rendering
       setMessages(prev => [
         ...prev,
-        {
-          id: Date.now() + 1,
-          role: "assistant",
-          content: responseText,
-          timestamp: new Date(),
-        },
+        { id: Date.now(), role: "assistant", content: responseText, timestamp: new Date() },
       ]);
     } catch (err) {
       console.error("Gemini error:", err);
       setMessages(prev => [
         ...prev,
         {
-          id: Date.now() + 1,
+          id: Date.now(),
           role: "assistant",
           content: "Sorry, I couldn’t generate advice right now.",
           timestamp: new Date(),
@@ -123,18 +94,54 @@ Item details:
     }
   };
 
+  const handleUserQuestion = async () => {
+    if (!inputValue.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      id: Date.now(),
+      role: "user",
+      content: inputValue,
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputValue("");
+    setIsLoading(true);
+
+    try {
+      const result = await chatRef.current.sendMessage(userMessage.content);
+      const assistantMessage: Message = {
+        id: Date.now() + 1,
+        role: "assistant",
+        content: result.response.text(),
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (err) {
+      console.error(err);
+      setMessages(prev => [
+        ...prev,
+        { id: Date.now() + 1, role: "assistant", content: "Sorry, I couldn’t generate advice.", timestamp: new Date() },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <Card className="p-4 w-full">
-      <h2 className="text-lg font-semibold mb-3">AI Price Advisor</h2>
+    <Card className="p-4 w-full relative">
+      <Button size="sm" variant="ghost" className="absolute top-2 right-2" onClick={onClose}>
+        <X className="h-4 w-4" />
+      </Button>
+
+      <h2 className="text-lg font-semibold mb-3">AI Price Advisor for {inventoryItem.name}</h2>
 
       <ScrollArea className="h-[260px] mb-3">
         <div className="space-y-3">
           {messages.map(m => (
             <div
               key={m.id}
-              className={`p-3 rounded ${
-                m.role === "assistant" ? "bg-accent/10" : "bg-primary/10"
-              }`}
+              className={`p-3 rounded ${m.role === "assistant" ? "bg-accent/10" : "bg-primary/10"}`}
             >
               {m.content}
             </div>
@@ -142,8 +149,7 @@ Item details:
 
           {isLoading && (
             <div className="flex items-center gap-2 text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Thinking…
+              <Loader2 className="h-4 w-4 animate-spin" /> Thinking…
             </div>
           )}
         </div>
@@ -154,9 +160,9 @@ Item details:
           value={inputValue}
           onChange={e => setInputValue(e.target.value)}
           placeholder="Ask a follow-up question…"
-          onKeyDown={e => e.key === "Enter" && sendMessage(inputValue)}
+          onKeyDown={e => e.key === "Enter" && handleUserQuestion()}
         />
-        <Button onClick={() => sendMessage(inputValue)} disabled={isLoading}>
+        <Button onClick={handleUserQuestion} disabled={isLoading}>
           Send
         </Button>
       </div>

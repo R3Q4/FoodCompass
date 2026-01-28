@@ -79,9 +79,12 @@ const ChangePricePage = () => {
           </div>
 
           {/* RIGHT */}
-          <div className="flex items-start">
-            <AI />
-          </div>
+<div className="flex items-start">
+  <AI
+    inventoryItem={item}
+    onClose={() => {}}
+  />
+</div>
         </div>
       </div>
     </div>
