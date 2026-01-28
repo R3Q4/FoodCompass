@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { Plus, Brain } from "lucide-react";
+import { useInventory } from "@/hooks/useInventory";
 
 const categories = [
   "Dairy","Bakery","Produce","Meat & Seafood","Frozen","Beverages",
@@ -28,6 +29,7 @@ const units = ["kg","lbs","units","liters","packs","boxes","cases"];
 
 const InventoryForm = () => {
   const { user } = useAuth();
+  const { addInventoryItem } = useInventory(); // 🔥 useInventory hook
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -59,10 +61,8 @@ const InventoryForm = () => {
       description: businessContext.description,
     };
 
-    // Save to sessionStorage
-    const existingList = JSON.parse(sessionStorage.getItem("inventoryList") || "[]");
-    existingList.push(inventoryItem);
-    sessionStorage.setItem("inventoryList", JSON.stringify(existingList));
+    // 🔥 Add item via useInventory (updates state + localStorage)
+    addInventoryItem(inventoryItem);
 
     setLoading(false);
 
@@ -87,8 +87,6 @@ const InventoryForm = () => {
 
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-
-          {/* Inventory Inputs */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Item Name</Label>
@@ -98,6 +96,7 @@ const InventoryForm = () => {
                 required
               />
             </div>
+
             <div className="space-y-2">
               <Label>Category</Label>
               <Select value={formData.category} onValueChange={v => setFormData({ ...formData, category: v })}>
@@ -105,6 +104,7 @@ const InventoryForm = () => {
                 <SelectContent>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
               </Select>
             </div>
+
             <div className="space-y-2">
               <Label>Quantity</Label>
               <div className="flex gap-2">
@@ -121,6 +121,7 @@ const InventoryForm = () => {
                 </Select>
               </div>
             </div>
+
             <div className="space-y-2">
               <Label>Original Price per unit</Label>
               <Input
@@ -131,6 +132,7 @@ const InventoryForm = () => {
                 required
               />
             </div>
+
             <div className="space-y-2">
               <Label>Expiry Date</Label>
               <Input
@@ -140,6 +142,7 @@ const InventoryForm = () => {
                 required
               />
             </div>
+
             <div className="space-y-2">
               <Label>Location</Label>
               <Input
@@ -173,7 +176,6 @@ const InventoryForm = () => {
           <Button type="submit" disabled={loading}>
             {loading ? "Saving..." : "Add Item"}
           </Button>
-
         </form>
       </CardContent>
     </Card>
