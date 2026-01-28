@@ -9,7 +9,8 @@ export interface InventoryItem {
   originalPrice: number;
   expiryDate: string;
   location: string;
-  createdAt: string;
+  coordinates?: { lat: number; lon: number } | null;
+  createdAt: string;  
   status: 'active' | 'reduced' | 'donated' | 'bidding' | 'sold';
   aiRecommendation?: AIRecommendation;
 }

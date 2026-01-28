@@ -1,3 +1,5 @@
+import { extractTextFromPdf } from "@/ai/helperPDF"; // adjust path
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +30,29 @@ const categories = [
 
 const units = ["kg", "lbs", "units", "liters", "packs", "boxes", "cases"];
 
+// Helper to get coordinates from location string using Nominatim
+const getCoordinates = async (address: string) => {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`,
+      {
+        headers: {
+          "User-Agent": "InventoryApp/1.0" // required by Nominatim
+        }
+      }
+    );
+    const data = await response.json();
+    if (data.length === 0) return null;
+    return {
+      lat: parseFloat(data[0].lat),
+      lon: parseFloat(data[0].lon)
+    };
+  } catch (err) {
+    console.error("Error fetching coordinates:", err);
+    return null;
+  }
+};
+
 const InventoryForm = () => {
   const { user } = useAuth();
   const { addInventoryItem } = useInventory();
@@ -48,78 +73,90 @@ const InventoryForm = () => {
 
   const [businessContext, setBusinessContext] = useState({
     description: "",
-    companyPdf: null as File | null,
-    transactionPdf: null as File | null
+    companyPdf: null as File | null
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
 
-    setLoading(true);
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!user) return;
 
-    const inventoryItem = addInventoryItem({
-      businessId: user.id,
-      businessName: user.businessName || "Unknown Business",
-      name: formData.name,
-      category: formData.category,
-      quantity: parseInt(formData.quantity),
-      unit: formData.unit,
-      originalPrice: parseFloat(formData.originalPrice),
-      expiryDate: formData.expiryDate,
-      location: formData.location
-    });
+  setLoading(true);
 
-    // send extra context to backend / AI service
-    const aiPayload = new FormData();
-    aiPayload.append("inventory", JSON.stringify(inventoryItem));
-    aiPayload.append("description", businessContext.description);
+  // Get coordinates from location
+  const coords = await getCoordinates(formData.location);
 
-    if (businessContext.companyPdf) {
-      aiPayload.append("companyPdf", businessContext.companyPdf);
-    }
-    if (businessContext.transactionPdf) {
-      aiPayload.append("transactionPdf", businessContext.transactionPdf);
-    }
+  const inventoryItem = addInventoryItem({
+    businessId: user.id,
+    businessName: user.businessName || "Unknown Business",
+    name: formData.name,
+    category: formData.category,
+    quantity: parseInt(formData.quantity),
+    unit: formData.unit,
+    originalPrice: parseFloat(formData.originalPrice),
+    expiryDate: formData.expiryDate,
+    location: formData.location,
+    coordinates: coords // store coordinates
+  });
 
+  // Extract text from PDF (if uploaded)
+  let companyPdfText = "";
+  if (businessContext.companyPdf) {
     try {
-      const res = await fetch("/api/ai/recommendations", {
-        method: "POST",
-        body: aiPayload
-      });
-      const data = await res.json();
-      setAiResults(data.recommendations);
-
+      companyPdfText = await extractTextFromPdf(businessContext.companyPdf);
+    } catch (err) {
+      console.error("Error reading PDF text:", err);
       toast({
-        title: "AI recommendations generated",
-        description: "We analyzed your inventory with additional context."
-      });
-    } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err.message || "Failed to generate AI recommendations."
+        title: "PDF Error",
+        description: "Failed to read the PDF text."
       });
     }
+  }
 
-    setLoading(false);
+  // Prepare AI payload
+  const aiPayload = new FormData();
+  aiPayload.append("inventory", JSON.stringify(inventoryItem));
+  aiPayload.append("description", businessContext.description);
+  aiPayload.append("companyPdfText", companyPdfText); // send text instead of file
 
-    // Reset form
-    setFormData({
-      name: "",
-      category: "",
-      quantity: "",
-      unit: "units",
-      originalPrice: "",
-      expiryDate: "",
-      location: ""
+  try {
+    const res = await fetch("/api/ai/recommendations", {
+      method: "POST",
+      body: aiPayload
     });
+    const data = await res.json();
+    setAiResults(data.recommendations);
 
-    setBusinessContext({
-      description: "",
-      companyPdf: null,
-      transactionPdf: null
+    toast({
+      title: "AI recommendations generated",
+      description: "We analyzed your inventory with additional context."
     });
-  };
+  } catch (err: any) {
+    toast({
+      title: "Error",
+      description: err.message || "Failed to generate AI recommendations."
+    });
+  }
+
+  setLoading(false);
+
+  // Reset form
+  setFormData({
+    name: "",
+    category: "",
+    quantity: "",
+    unit: "units",
+    originalPrice: "",
+    expiryDate: "",
+    location: ""
+  });
+
+  setBusinessContext({
+    description: "",
+    companyPdf: null,
+  });
+};
+
 
   return (
     <>
@@ -229,6 +266,7 @@ const InventoryForm = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, location: e.target.value })
                   }
+                  placeholder="City, Address, or Postal Code"
                   required
                 />
               </div>
@@ -268,20 +306,6 @@ const InventoryForm = () => {
                       setBusinessContext({
                         ...businessContext,
                         companyPdf: e.target.files?.[0] || null
-                      })
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Other Information PDF</Label>
-                  <Input
-                    type="file"
-                    accept="application/pdf"
-                    onChange={(e) =>
-                      setBusinessContext({
-                        ...businessContext,
-                        transactionPdf: e.target.files?.[0] || null
                       })
                     }
                   />
