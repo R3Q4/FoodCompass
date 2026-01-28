@@ -18,13 +18,7 @@ const InventoryList = () => {
 
   const businessInventory = inventory.filter(item => item.businessId === user?.id);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
+  const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   const getDaysUntilExpiry = (expiryDate: string) => {
     const today = new Date();
@@ -35,16 +29,15 @@ const InventoryList = () => {
   const handleApplyStrategy = (item: InventoryItem) => {
     if (!item.aiRecommendation) return;
 
-    // If price reduction, navigate to Dynamic Pricing page
     if (item.aiRecommendation.strategy === "price_reduction") {
-      navigate("/dynamic-pricing", { state: { itemId: item.id } });
+navigate(`/business/change/${item.id}`);
       return;
     }
 
-    // Otherwise, just update status
     const statusMap: Record<string, InventoryItem['status']> = {
-      'donation': 'donated',
-      'bidding': 'bidding'
+      donation: 'donated',
+      bidding: 'bidding',
+      dispose: 'sold', // You can also create a "disposed" status
     };
 
     const newStatus = statusMap[item.aiRecommendation.strategy];
@@ -52,7 +45,7 @@ const InventoryList = () => {
 
     toast({
       title: "Strategy applied!",
-      description: `${item.name} is now available for ${getStrategyLabel(item.aiRecommendation.strategy).toLowerCase()}.`
+      description: `${item.name} is now ${getStrategyLabel(item.aiRecommendation.strategy).toLowerCase()}.`
     });
   };
 
@@ -78,14 +71,11 @@ const InventoryList = () => {
 
   const getStrategyIcon = (strategy?: string) => {
     switch (strategy) {
-      case 'price_reduction':
-        return <TrendingDown className="h-4 w-4" />;
-      case 'donation':
-        return <Heart className="h-4 w-4" />;
-      case 'bidding':
-        return <Gavel className="h-4 w-4" />;
-      default:
-        return null;
+      case 'price_reduction': return <TrendingDown className="h-4 w-4" />;
+      case 'donation': return <Heart className="h-4 w-4" />;
+      case 'bidding': return <Gavel className="h-4 w-4" />;
+      case 'dispose': return <Trash2 className="h-4 w-4" />;
+      default: return null;
     }
   };
 
@@ -107,12 +97,9 @@ const InventoryList = () => {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Package className="h-5 w-5" />
-          Your Inventory
+          <Package className="h-5 w-5" /> Your Inventory
         </CardTitle>
-        <CardDescription>
-          Manage your surplus items and apply AI recommendations
-        </CardDescription>
+        <CardDescription>Manage your surplus items and apply AI recommendations</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
@@ -129,7 +116,7 @@ const InventoryList = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {businessInventory.map((item) => {
+              {businessInventory.map(item => {
                 const daysLeft = getDaysUntilExpiry(item.expiryDate);
                 const bids = getItemBids(item.id);
                 const donations = getItemDonations(item.id);
@@ -191,20 +178,12 @@ const InventoryList = () => {
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         {item.status === 'active' && item.aiRecommendation && (
-                          <Button 
-                            size="sm" 
-                            onClick={() => handleApplyStrategy(item)}
-                            className="gap-1"
-                          >
+                          <Button size="sm" onClick={() => handleApplyStrategy(item)} className="gap-1">
                             <Sparkles className="h-3 w-3" />
                             Apply
                           </Button>
                         )}
-                        <Button 
-                          size="sm" 
-                          variant="ghost"
-                          onClick={() => handleDelete(item.id, item.name)}
-                        >
+                        <Button size="sm" variant="ghost" onClick={() => handleDelete(item.id, item.name)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>

@@ -10,13 +10,13 @@ export interface InventoryItem {
   expiryDate: string;
   location: string;
   coordinates?: { lat: number; lon: number } | null;
-  createdAt: string;  
+  createdAt: string;
   status: 'active' | 'reduced' | 'donated' | 'bidding' | 'sold';
   aiRecommendation?: AIRecommendation;
 }
 
 export interface AIRecommendation {
-  strategy: 'price_reduction' | 'donation' | 'bidding';
+  strategy: 'price_reduction' | 'donation' | 'bidding' | 'dispose';
   confidence: number;
   suggestedPrice?: number;
   reasoning: string;

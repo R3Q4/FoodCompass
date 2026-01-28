@@ -77,6 +77,29 @@ export const useInventory = () => {
     return newItem;
   };
 
+  /* ------------------ Inventory ------------------ */
+
+const updateItemPrice = (itemId: string, newPrice: number) => {
+  const updatedInventory = inventory.map(item => {
+    if (item.id === itemId) {
+      const updatedItem = {
+        ...item,
+        originalPrice: newPrice,
+        // Optionally, recalculate AI recommendation
+        aiRecommendation: generateAIRecommendation({
+          ...item,
+          originalPrice: newPrice
+        })
+      };
+      return updatedItem;
+    }
+    return item;
+  });
+
+  setInventory(updatedInventory);
+  localStorage.setItem(INVENTORY_KEY, JSON.stringify(updatedInventory));
+};
+
   const updateItemStatus = (
     itemId: string,
     status: InventoryItem['status']
@@ -255,7 +278,9 @@ export const useInventory = () => {
     donations,
     addInventoryItem,
     updateItemStatus,
+    updateInventoryItem,
     deleteInventoryItem,
+    updateItemPrice, 
     placeBid,
     claimDonation,
     updateBidStatus,
