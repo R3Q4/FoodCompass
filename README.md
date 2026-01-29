@@ -9,7 +9,7 @@
 ``` npm run dev ```
 
 3. Open in browser
-```http://localhost:3000```
+```http://localhost:8080```
 
 ## API
 1. Create a .env file
@@ -40,19 +40,19 @@ It is a centralised website that serves the public and
 3. Donate
 4. Dispose
 
-1. Step 1: make an account
-Business POV:
-2. Step 2: Key in your business food surplus 
-3. Step 3: Click apply for the option you would like
-4. Step 4: 
-User POV
-2. Step 2: make an account
-3. Step 3: Select food item you want
-4. If bidding, place the price you want to bid
-5. Check if your bid manages to get through
-6. Contact the business for pick-up if your bid succeeds
-7. If donation, input the quantity 
-8. Contact the business email for pick-up
+- Step 1: make an account
+- Business POV:
+    - Step 2: Key in your business food surplus 
+    - Step 3: Click apply for the option you would like
+    - Step 4: 
+- User POV
+    - Step 2: make an account
+    - Step 3: Select food item you want
+    - If bidding, place the price you want to bid
+        - Check if your bid manages to get through
+            - Contact the business for pick-up if your bid succeeds
+        - If donation, input the quantity 
+            - Contact the business email for pick-up
 
 ### Contributors
 1. Koh Rui En
@@ -66,4 +66,3 @@ User POV
     - real time updates after evaluating performance in previous hour, last month, last year, day of the week, public holidays
     -  Recommendations can take into account other types such as different marketing tactics
     - Incorporate forecasting and input for past transaction sales
-- 
