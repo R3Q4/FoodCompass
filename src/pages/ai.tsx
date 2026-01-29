@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, X } from "lucide-react";
@@ -36,21 +36,25 @@ const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY!);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 export default function AI({ inventoryItem, onClose }: AIProps) {
-  const [messages, setMessages] = useState<Message[]>([]); // only assistant messages will be rendered initially
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const chatRef = useRef(
-    model.startChat({
-      history: [],
-      generationConfig: { maxOutputTokens: 2000 },
-    })
-  );
+  const [chat, setChat] = useState<any>(null);
 
-  // Initial AI response (hidden user prompt)
+  // Initialize chat and send initial prompt
   useEffect(() => {
-    const initialPrompt = `
-You are an assistant advising a business on reducing food waste and maximizing revenue.
-Using the following item details, provide a short explanation why lowering the price is a smart decision:
+    const initChat = async () => {
+      try {
+        const chatInstance = await model.startChat({
+          history: [],
+          generationConfig: { maxOutputTokens: 2000 },
+        });
+        setChat(chatInstance);
+
+        // Initial hidden prompt
+        const initialPrompt = `
+You are an assistant advising a business on reducing food waste and maximizing revenue. 
+Using the following item details, provide a short explanation why lowering the price is a smart decision for this particular business:
 Answer in this format: recommended percentage discount, reason on a new line
 Item details:
 - Name: ${inventoryItem.name}
@@ -61,19 +65,26 @@ Item details:
 - Location: ${inventoryItem.location}
 - Business: ${inventoryItem.businessName}
 - Description: ${inventoryItem.description || "N/A"}
-`;
+        `;
+        fetchAIResponse(initialPrompt, chatInstance);
+      } catch (err) {
+        console.error("Error initializing chat:", err);
+      }
+    };
 
-    fetchAIResponse(initialPrompt);
+    initChat();
   }, [inventoryItem]);
 
-  const fetchAIResponse = async (prompt: string) => {
-    setIsLoading(true);
+  // Fetch AI response
+  const fetchAIResponse = async (prompt: string, chatInstance?: any) => {
+    const activeChat = chatInstance || chat;
+    if (!activeChat) return;
 
+    setIsLoading(true);
     try {
-      const result = await chatRef.current.sendMessage(prompt);
+      const result = await activeChat.sendMessage(prompt);
       const responseText = result.response.text();
 
-      // Only append assistant messages for rendering
       setMessages(prev => [
         ...prev,
         { id: Date.now(), role: "assistant", content: responseText, timestamp: new Date() },
@@ -94,8 +105,9 @@ Item details:
     }
   };
 
+  // Handle user input
   const handleUserQuestion = async () => {
-    if (!inputValue.trim() || isLoading) return;
+    if (!inputValue.trim() || isLoading || !chat) return;
 
     const userMessage: Message = {
       id: Date.now(),
@@ -103,13 +115,12 @@ Item details:
       content: inputValue,
       timestamp: new Date(),
     };
-
     setMessages(prev => [...prev, userMessage]);
     setInputValue("");
     setIsLoading(true);
 
     try {
-      const result = await chatRef.current.sendMessage(userMessage.content);
+      const result = await chat.sendMessage(userMessage.content);
       const assistantMessage: Message = {
         id: Date.now() + 1,
         role: "assistant",
@@ -118,10 +129,15 @@ Item details:
       };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (err) {
-      console.error(err);
+      console.error("Gemini error:", err);
       setMessages(prev => [
         ...prev,
-        { id: Date.now() + 1, role: "assistant", content: "Sorry, I couldn’t generate advice.", timestamp: new Date() },
+        {
+          id: Date.now() + 1,
+          role: "assistant",
+          content: "Sorry, I couldn’t generate advice.",
+          timestamp: new Date(),
+        },
       ]);
     } finally {
       setIsLoading(false);
